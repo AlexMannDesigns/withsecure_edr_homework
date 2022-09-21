@@ -26,10 +26,11 @@ def print_message_body(message):
 
 def delete_message(message, queue):
     try:
-        response = client.delete_message(
+        response = sqs_client.delete_message(
             QueueUrl=queue,
             ReceiptHandle=message['Messages'][0]['ReceiptHandle']
         )
+        print("message deleted")
     except ClientError:
         print("couldn't delete messages from the queue")
     else:
@@ -38,7 +39,7 @@ def delete_message(message, queue):
 #reading from the queue
 def receive_next_message(queue):
     try:
-        message = client.receive_message(
+        message = sqs_client.receive_message(
                 QueueUrl=queue,
                 #MaxNumberOfMessages=num_of_messages,
                 #VisibilityTimeout=visibility_timeout
@@ -50,13 +51,37 @@ def receive_next_message(queue):
     else:
         return message
 
+def add_to_stream()
+    try:
+        response = kinesis_client.put_records(
+            Records=[
+                {
+                    Data=b'bytes',
+                    PartitionKey='',#md5 hashing key
+                },
+            ],
+            StreamName='events' 
+        )
+    except ClientError as error:
+        print("Couldn't add data to stream")
+    else:
+        return response
+
 # Program setup
 # Session must be provided with dummy credentials in order to interface with AWS
 # Default endpoint url overwritten with url of localstack
 
 session = boto3.session.Session()
-client = session.client(
+sqs_client = session.client(
     'sqs',
+    region_name='eu-west-1',
+    endpoint_url='http://localhost:4566',
+    aws_access_key_id='ACCESS_KEY',
+    aws_secret_access_key='SECRET_KEY',
+    aws_session_token='SESSION_TOKEN'
+)
+kinesis_client = session.client(
+    'kinesis',
     region_name='eu-west-1',
     endpoint_url='http://localhost:4566',
     aws_access_key_id='ACCESS_KEY',
@@ -78,6 +103,15 @@ visibility_timeout = int(sys.argv[2])
 
 #control loop
 queue = "http://localstack:4566/000000000000/submissions"
+
+'''
+response = kinesis_client.list_streams()
+for name in response['StreamNames']:
+    print(name)
+'''
+
+
+'''
 more_messages = True
 while more_messages:
     received_message = receive_next_message(queue)
@@ -86,5 +120,5 @@ while more_messages:
         delete_message(received_message, queue)
     else:
         more_messages = False
-
+'''
 print("done")
