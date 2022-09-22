@@ -10,22 +10,12 @@
 # visibility timeout of those messages must be configurable
 
 import boto3
-import base64
-import json
 import sys
+
 from botocore.exceptions import ClientError
 from try_parse_uint import *
 from delete_message import delete_multiple_messages
 from receive_message import receive_multiple_messages
-
-def print_message_body(message):
-     #decoding to json
-     code = message['Body']
-     decoded_bytes = base64.standard_b64decode(code)
-     decoded_str = decoded_bytes.decode("ascii")
-     json_str=json.loads(decoded_str)
-     print(json.dumps(json_str, indent=4))
-
 
 
 #def add_to_stream():
@@ -96,7 +86,7 @@ for name in response['StreamNames']:
 
 more_messages = True
 while more_messages:
-    received_messages = receive_multiple_messages(queue, num_of_messages, visibility_timeout)
+    received_messages = receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout)
     if received_messages:
         #print("messages received")
         #message validation and output will be handled here

@@ -1,4 +1,4 @@
-import json
+#import json
 from botocore.exceptions import ClientError
 
 def delete_message(sqs_client, message, queue):
@@ -14,7 +14,7 @@ def delete_message(sqs_client, message, queue):
         return response
 
 def delete_multiple_messages(sqs_client, messages, queue):
-    print("message starts: ", json.dumps(messages, indent=4))
+ #   print("message starts: ", json.dumps(messages, indent=4))
     try:
         response = sqs_client.delete_message_batch(
             QueueUrl=queue,

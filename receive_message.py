@@ -1,5 +1,5 @@
-#import boto3
 from botocore.exceptions import ClientError
+from print_message_body import *
 
 def receive_next_message(sqs_client, queue):
     try:
