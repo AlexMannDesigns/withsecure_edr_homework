@@ -18,11 +18,11 @@ def add_to_stream(kinesis_client, stream_name, messages):
         records.append(record)
     try:
         response = kinesis_client.put_records(
-            Records=records,
-            StreamName=stream_name 
+        Records=records,
+        StreamName=stream_name 
     )
     except ClientError as error:
         print("Couldn't add data to stream")
     else:
-        return response
+         return response
 

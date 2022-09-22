@@ -5,7 +5,7 @@
 #   - must have a 'device_id'
 #   - must have a timestamp 'time_created'
 # events must be ordered in the context of a single submission
-# publish validated events to the kinesis stream
+# publish validated events to the kinesis stream - DONE (validation still a wip)
 # number of messages read from SQS in a single request must be configurable - DONE
 # visibility timeout of those messages must be configurable - DONE
 
@@ -42,13 +42,7 @@ kinesis_client = session.client(
     aws_secret_access_key='SECRET_KEY',
     aws_session_token='SESSION_TOKEN'
 )
-'''
-Validation:
-    check submission_id
-    check device_id
-    check time_created
-    check events contains a new_process or a network_connection
-'''
+
 # messages read and visibility timeout must be configurable, so these can be read from cmd line
 # if the args are invalid, then we can display a usage message
 if (len(sys.argv) != 3
@@ -81,16 +75,45 @@ if kinesis_response['HasMoreStreams'] == True:
 
 stream_name = kinesis_response['StreamNames'][0]
 
+'''
+Validation:
+    check submission_id
+    check device_id
+    check time_created
+    check events contains a new_process or a network_connection
+'''
+# Idea - create a new array, check 'Messages' for errors
+# Any item that passes the checking can be appended to the new array
+# the 'Messages' array in the original object is replaced with the new one
+
+def filter_invalid_messages(messages):
+    print(json.dumps(messages, indent=4)) 
+    res = []
+    for message in messages['Messages']:
+        code = message['Body']
+        decoded_bytes = base64.standard_b64decode(code)
+        decoded_str = decoded_bytes.decode("ascii")
+        json_obj=json.loads(decoded_str)
+    
+        if (json_obj['submission_id'] == "not-an-uuid"
+            or len(json_obj['submission_id']) != 36
+            or json_obj['device_id'] == "not-an-uuid"
+            or len(json_obj['device_id']) != 36
+            or len(json_obj['time_created']) != 26):
+                print('hello')
+    return res
+
 # control loop - the main process of the program is handled here
 # The program will continuously pull messages from the queue until there is nothing left to read
 # In each iteration the batch of messages is validated, outputted to the stream and then deleted
 
 while more_messages:
     received_messages = receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout)
-    if received_messages:
-        #message validation and output will be handled here
-       add_to_stream(kinesis_client, stream_name, received_messages)
+    if received_messages and 'Messages' in received_messages:
+        filter_invalid_messages(received_messages)
+        add_to_stream(kinesis_client, stream_name, received_messages)
         delete_multiple_messages(sqs_client, received_messages, queue)
     else:
-       more_messages = False
+        print(json.dumps(received_messages, indent=4))
+        more_messages = False
 print("done")
