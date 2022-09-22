@@ -1,38 +1,25 @@
 # Todo
-# read from queue in a loop
+# read from queue in a loop - DONE
 # create validation process, drop invalid data
 #   - must have a unique id ('submission_id')
 #   - must have a 'device_id'
 #   - must have a timestamp 'time_created'
 # events must be ordered in the context of a single submission
 # publish validated events to the kinesis stream
-# number of messages read from SQS in a single request must be configurable
-# visibility timeout of those messages must be configurable
+# number of messages read from SQS in a single request must be configurable - DONE
+# visibility timeout of those messages must be configurable - DONE
+
+import json
 
 import boto3
 import sys
-
 from botocore.exceptions import ClientError
+
+from print_message_body import *
 from try_parse_uint import *
 from delete_message import delete_multiple_messages
 from receive_message import receive_multiple_messages
-
-
-#def add_to_stream():
- #   try:
- #       response = kinesis_client.put_records(
-  #          Records=[
-   #             {
-    #                Data=b'bytes',
-     #               PartitionKey='',#md5 hashing key
-      #          },
-    #        ],
-    #        StreamName='events' 
-    #   )
- #   except ClientError as error:
-  #      print("Couldn't add data to stream")
-   # else:
-    #    return response
+from add_to_stream import add_to_stream
 
 # Program setup
 # Session must be provided with dummy credentials in order to interface with AWS
@@ -55,7 +42,13 @@ kinesis_client = session.client(
     aws_secret_access_key='SECRET_KEY',
     aws_session_token='SESSION_TOKEN'
 )
-
+'''
+Validation:
+    check submission_id
+    check device_id
+    check time_created
+    check events contains a new_process or a network_connection
+'''
 # messages read and visibility timeout must be configurable, so these can be read from cmd line
 # if the args are invalid, then we can display a usage message
 if (len(sys.argv) != 3
@@ -71,27 +64,33 @@ if (len(sys.argv) != 3
     NB: both args must be numeric values""")
     sys.exit()
 
+# Variables needed for main loop
 num_of_messages = int(sys.argv[1])
 visibility_timeout = int(sys.argv[2])
-
-#control loop
 queue = "http://localstack:4566/000000000000/submissions"
+more_messages = True 
 
-'''
-response = kinesis_client.list_streams()
-for name in response['StreamNames']:
-    print(name)
-'''
+# Establishing name of output stream
+# The stream we only need one stream, so the limit param is used 
+# for extra safety, if we have more streams present we return an error and close the program
+kinesis_response = kinesis_client.list_streams(Limit=1)
 
+if kinesis_response['HasMoreStreams'] == True:
+    print("error: check kinesis streams")
+    quit()
 
-more_messages = True
+stream_name = kinesis_response['StreamNames'][0]
+
+# control loop - the main process of the program is handled here
+# The program will continuously pull messages from the queue until there is nothing left to read
+# In each iteration the batch of messages is validated, outputted to the stream and then deleted
+
 while more_messages:
     received_messages = receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout)
     if received_messages:
-        #print("messages received")
         #message validation and output will be handled here
+       add_to_stream(kinesis_client, stream_name, received_messages)
         delete_multiple_messages(sqs_client, received_messages, queue)
-#    more_messages = False
     else:
        more_messages = False
 print("done")
