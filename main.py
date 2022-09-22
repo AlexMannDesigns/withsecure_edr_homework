@@ -15,57 +15,34 @@ import json
 import sys
 from botocore.exceptions import ClientError
 from try_parse_uint import *
+from delete_message import delete_multiple_messages
+from receive_message import receive_multiple_messages
 
 def print_message_body(message):
      #decoding to json
-     code = message['Messages'][0]['Body']
+     code = message['Body']
      decoded_bytes = base64.standard_b64decode(code)
      decoded_str = decoded_bytes.decode("ascii")
      json_str=json.loads(decoded_str)
      print(json.dumps(json_str, indent=4))
 
-def delete_message(message, queue):
-    try:
-        response = sqs_client.delete_message(
-            QueueUrl=queue,
-            ReceiptHandle=message['Messages'][0]['ReceiptHandle']
-        )
-        print("message deleted")
-    except ClientError:
-        print("couldn't delete messages from the queue")
-    else:
-        return response
 
-#reading from the queue
-def receive_next_message(queue):
-    try:
-        message = sqs_client.receive_message(
-                QueueUrl=queue,
-                #MaxNumberOfMessages=num_of_messages,
-                #VisibilityTimeout=visibility_timeout
-        )
-        print_message_body(message)
-    except ClientError as error:
-        print("Couldn't receive messages from the queue")
-        raise error
-    else:
-        return message
 
-def add_to_stream()
-    try:
-        response = kinesis_client.put_records(
-            Records=[
-                {
-                    Data=b'bytes',
-                    PartitionKey='',#md5 hashing key
-                },
-            ],
-            StreamName='events' 
-        )
-    except ClientError as error:
-        print("Couldn't add data to stream")
-    else:
-        return response
+#def add_to_stream():
+ #   try:
+ #       response = kinesis_client.put_records(
+  #          Records=[
+   #             {
+    #                Data=b'bytes',
+     #               PartitionKey='',#md5 hashing key
+      #          },
+    #        ],
+    #        StreamName='events' 
+    #   )
+ #   except ClientError as error:
+  #      print("Couldn't add data to stream")
+   # else:
+    #    return response
 
 # Program setup
 # Session must be provided with dummy credentials in order to interface with AWS
@@ -91,10 +68,16 @@ kinesis_client = session.client(
 
 # messages read and visibility timeout must be configurable, so these can be read from cmd line
 # if the args are invalid, then we can display a usage message
-if len(sys.argv) != 3 or not try_parse_uint(sys.argv[1]) or not try_parse_uint(sys.argv[2]) or int(sys.argv[1]) > 10:
+if (len(sys.argv) != 3
+    or not try_parse_uint(sys.argv[1])
+    or not try_parse_uint(sys.argv[2])
+    or int(sys.argv[1]) < 1
+    or int(sys.argv[1]) > 10
+    or int(sys.argv[2]) < 0
+    or int(sys.argv[2]) > 43200):
     print("""Usage: python3 main.py arg1 arg2
     arg1 = the number of messages to read from the queue (min = 1, max = 10)
-    arg2 = the duration (in seconds) those messages are visible after being received (min = 1)
+    arg2 = the duration (in seconds) those messages are visible after being received (min = 0, max = 43200)
     NB: both args must be numeric values""")
     sys.exit()
 
@@ -111,14 +94,14 @@ for name in response['StreamNames']:
 '''
 
 
-'''
 more_messages = True
 while more_messages:
-    received_message = receive_next_message(queue)
-    if received_message:
+    received_messages = receive_multiple_messages(queue, num_of_messages, visibility_timeout)
+    if received_messages:
+        #print("messages received")
         #message validation and output will be handled here
-        delete_message(received_message, queue)
+        delete_multiple_messages(sqs_client, received_messages, queue)
+#    more_messages = False
     else:
-        more_messages = False
-'''
+       more_messages = False
 print("done")
