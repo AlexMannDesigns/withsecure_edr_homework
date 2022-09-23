@@ -8,12 +8,8 @@
 # publish validated events to the kinesis stream - DONE (validation still a wip)
 # number of messages read from SQS in a single request must be configurable - DONE
 # visibility timeout of those messages must be configurable - DONE
-from botocore.exceptions import ClientError
-
 import boto3
 import sys
-
-import json #needed for debugging
 
 from validate_args import validate_args 
 from print_message_body import *
@@ -70,18 +66,18 @@ queue = "http://localstack:4566/000000000000/submissions"
 # control loop - the main process of the program is handled here
 # The program will continuously pull messages from the queue until there is nothing left to read
 # In each iteration the batch of messages is validated, outputted to the stream and then deleted
-more_messages = True 
-while more_messages:
-    received_messages = receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout)
-    if received_messages and 'Messages' in received_messages:
-        filter_invalid_messages(received_messages)
-        print("modified:")
-        print(json.dumps(received_messages, indent=4))
-        if len(received_messages['Messages']):
-            add_to_stream(kinesis_client, stream_name, received_messages)
-            delete_multiple_messages(sqs_client, received_messages, queue)
-        more_messages = False
-    else:
-        print(json.dumps(received_messages, indent=4))
-        more_messages = False
-print("done")
+def main():
+    more_messages = True 
+    while more_messages:
+        received_messages = receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout)
+        if received_messages and 'Messages' in received_messages:
+            filter_invalid_messages(received_messages)
+            if len(received_messages['Messages']):
+                add_to_stream(kinesis_client, stream_name, received_messages)
+                delete_multiple_messages(sqs_client, received_messages, queue)
+        else:
+            more_messages = False
+    print("End of queue")
+
+if __name__ == '__main__':
+    main()
