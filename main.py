@@ -74,7 +74,7 @@ def main():
             filter_invalid_messages(received_messages)
             if len(received_messages['Messages']):
                 add_to_stream(kinesis_client, stream_name, received_messages)
-                delete_multiple_messages(sqs_client, received_messages, queue)
+            delete_multiple_messages(sqs_client, received_messages, queue)
         else:
             more_messages = False
     print("End of queue")
