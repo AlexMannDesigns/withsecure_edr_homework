@@ -1,6 +1,9 @@
 import json
 import base64
 
+# a simple function to help with debugging. Decodes the body from base64
+# and prints to stdout in pretty format json
+
 def print_message_body(message):
      code = message['Body']
      decoded_bytes = base64.standard_b64decode(code)

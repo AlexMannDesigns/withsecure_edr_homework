@@ -1,16 +1,10 @@
-#import json
 from botocore.exceptions import ClientError
 
-def delete_message(sqs_client, message, queue):
-    try:
-        response = sqs_client.delete_message(
-            QueueUrl=queue,
-            ReceiptHandle=message['Messages'][0]['ReceiptHandle']
-        )
-    except ClientError:
-        print("couldn't delete messages from the queue")
-    else:
-        return response
+# As the user is able to read from the queue in batches, we need to delete
+# messages in batches as well. The method implemented here is to create
+# an list of objects using a helper function, so that this can be passed to
+# the delete_message_batch function as the 'Entries' parameter.
+# In the event of an error, a message will be printed
 
 def create_entry(message):
     Id = message['MessageId']

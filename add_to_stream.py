@@ -1,5 +1,11 @@
 from botocore.exceptions import ClientError
 
+# Similar to delete_message, here we want to be able to send data to the output
+# stream in batches. I have used the same process here to allow this to happen,
+# by adding a helper function to build a list, then passing that list as a param
+# in the put_records function call.
+# The return value of put_records is returned to main for ease of debugging
+
 def create_record(message):
     data = message['Body']
     partition_key = message['MD5OfBody']

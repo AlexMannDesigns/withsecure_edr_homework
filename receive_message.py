@@ -1,16 +1,9 @@
 from botocore.exceptions import ClientError
-from print_message_body import *
 
-def receive_next_message(sqs_client, queue):
-    try:
-        message = sqs_client.receive_message(
-                QueueUrl=queue,
-        )
-    except ClientError as error:
-        print("Couldn't receive messages from the queue")
-        raise error
-    else:
-        return message
+# This function will retreive messages from the queue and return them back to main
+# for processing, then deletion.
+# The num_of_messages and visibility_timeout params are configured by the user and
+# sent to the AWS api here.
 
 def receive_multiple_messages(sqs_client, queue, num_of_messages, visibility_timeout):
     try:
